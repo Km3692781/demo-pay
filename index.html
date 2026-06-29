@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alliance Digital Pay — Business Banking</title>
+<style>
+  :root{
+    --ink:#10172A;
+    --ink-2:#1B2440;
+    --canvas:#F7F8FA;
+    --panel:#FFFFFF;
+    --line:#E4E7EE;
+    --signal:#2F5DFF;
+    --signal-dark:#2247D6;
+    --slate:#5B6478;
+    --slate-light:#8A91A3;
+    --success:#1E9E6B;
+    --success-bg:#E7F6F0;
+    --danger:#D64545;
+    --danger-bg:#FBEAEA;
+    --warning:#C8862A;
+    --warning-bg:#FBF1E4;
+    --radius:10px;
+    font-family: -apple-system, "Segoe UI", "IBM Plex Sans", Inter, Roboto, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--canvas); color:var(--ink); font-size:14px; line-height:1.5;}
+  .tabular{font-variant-numeric: tabular-nums;}
+
+  /* ---------- Layout shell ---------- */
+  .app{display:flex; min-height:100vh;}
+  .sidebar{
+    width:240px; background:var(--ink); color:#fff; flex-shrink:0;
+    display:flex; flex-direction:column; padding:20px 0;
+  }
+  .brand{display:flex; align-items:center; gap:10px; padding:0 20px 24px; font-weight:700; font-size:16px; letter-spacing:.2px;}
+  .brand .mark{width:26px; height:26px; border-radius:7px; background:linear-gradient(135deg,var(--signal),#7C9CFF); flex-shrink:0;}
+  .nav{display:flex; flex-direction:column; gap:2px; padding:0 10px;}
+  .nav a{
+    color:#B7BEDB; text-decoration:none; padding:10px 12px; border-radius:8px;
+    font-size:13.5px; display:flex; align-items:center; gap:10px; cursor:pointer;
+  }
+  .nav a:hover{background:var(--ink-2); color:#fff;}
+  .nav a.active{background:var(--ink-2); color:#fff; font-weight:600;}
+  .nav .dot{width:6px; height:6px; border-radius:50%; background:var(--slate-light); flex-shrink:0;}
+  .sidebar-foot{margin-top:auto; padding:16px 20px 0; border-top:1px solid #2A3354;}
+  .sidebar-foot .acct{font-size:12px; color:var(--slate-light); margin-top:10px;}
+
+  .main{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .topbar{
+    height:64px; background:var(--panel); border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; padding:0 28px; flex-shrink:0;
+  }
+  .topbar h1{font-size:16px; font-weight:700; margin:0;}
+  .topbar .right{display:flex; align-items:center; gap:16px;}
+  .pill-btn{
+    border:1px solid var(--line); background:#fff; padding:8px 14px; border-radius:8px;
+    font-size:13px; font-weight:600; color:var(--ink); cursor:pointer;
+  }
+  .avatar{width:34px; height:34px; border-radius:50%; background:#EDEFF5; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; color:var(--slate); cursor:pointer;}
+
+  .content{padding:28px; flex:1; overflow:auto;}
+  .page{display:none;}
+  .page.active{display:block;}
+
+  /* ---------- Cards / grid ---------- */
+  .grid{display:grid; gap:18px;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-2{grid-template-columns:1.4fr 1fr;}
+  .card{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:20px;}
+  .card h3{margin:0 0 4px; font-size:13px; color:var(--slate); font-weight:600; text-transform:uppercase; letter-spacing:.03em;}
+  .balance-amount{font-size:28px; font-weight:700; margin-top:6px; position:relative; display:inline-flex; align-items:baseline;}
+  .balance-amount .currency{position:relative; left:6px; font-size:18px; color:var(--slate); margin-right:-4px;}
+  .balance-sub{font-size:12.5px; color:var(--slate-light); margin-top:6px;}
+  .trend-up{color:var(--success); font-weight:600;}
+  .trend-down{color:var(--danger); font-weight:600;}
+
+  .section-title{font-size:18px; font-weight:700; margin:32px 0 14px;}
+  .section-title:first-child{margin-top:0;}
+
+  table{width:100%; border-collapse:collapse; font-size:13.5px;}
+  th{text-align:left; color:var(--slate); font-weight:600; font-size:12px; text-transform:uppercase; letter-spacing:.03em; padding:10px 14px; border-bottom:1px solid var(--line);}
+  td{padding:13px 14px; border-bottom:1px solid var(--line); vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  .table-wrap{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;}
+
+  .status-pill{display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; font-size:12px; font-weight:600;}
+  .status-success{background:var(--success-bg); color:var(--success);}
+  .status-pending{background:var(--warning-bg); color:var(--warning);}
+  .status-failed{background:var(--danger-bg); color:var(--danger);}
+
+  .btn{
+    background:var(--signal); color:#fff; border:none; padding:10px 18px; border-radius:8px;
+    font-size:13.5px; font-weight:600; cursor:pointer; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn:hover{background:var(--signal-dark);}
+  .btn.secondary{background:#fff; color:var(--ink); border:1px solid var(--line);}
+  .btn.secondary:hover{background:#F2F3F7;}
+  .btn.danger-outline{background:#fff; color:var(--danger); border:1px solid var(--danger);}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+
+  .toolbar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="date"], select, textarea{
+    border:1px solid var(--line); border-radius:8px; padding:9px 12px; font-size:13.5px; background:#fff; color:var(--ink); width:100%;
+    font-family:inherit;
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--signal); outline-offset:1px; border-color:var(--signal);}
+  label{font-size:12.5px; font-weight:600; color:var(--slate); display:block; margin-bottom:6px;}
+  .field{margin-bottom:16px;}
+  .field-row{display:flex; gap:14px;}
+  .field-row .field{flex:1;}
+  .hint{font-size:11.5px; color:var(--slate-light); margin-top:5px;}
+  .error-text{font-size:12px; color:var(--danger); margin-top:5px; display:none;}
+
+  .empty-state{padding:60px 20px; text-align:center; color:var(--slate-light);}
+  .empty-state .big{font-size:32px; margin-bottom:10px;}
+
+  /* modal */
+  .modal-overlay{position:fixed; inset:0; background:rgba(16,23,42,.5); display:none; align-items:center; justify-content:center; z-index:100;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:#fff; border-radius:14px; width:460px; max-width:92vw; padding:26px; max-height:86vh; overflow:auto;}
+  .modal h2{margin:0 0 6px; font-size:17px;}
+  .modal .sub{font-size:13px; color:var(--slate); margin-bottom:18px;}
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+
+  .stepper{display:flex; gap:0; margin-bottom:24px;}
+  .step{flex:1; text-align:center; padding-bottom:10px; border-bottom:3px solid var(--line); font-size:12.5px; font-weight:600; color:var(--slate-light);}
+  .step.active{border-color:var(--signal); color:var(--signal);}
+  .step.done{border-color:var(--success); color:var(--success);}
+
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--ink); color:#fff; padding:14px 20px;
+    border-radius:10px; font-size:13.5px; box-shadow:0 8px 24px rgba(0,0,0,.2); display:none; z-index:200; max-width:320px;
+  }
+  .toast.show{display:block;}
+
+  .breadcrumb{font-size:12.5px; color:var(--slate-light); margin-bottom:6px;}
+
+  a.linklike{color:var(--signal); text-decoration:none; font-weight:600; cursor:pointer;}
+  a.linklike:hover{text-decoration:underline;}
+
+  .small-muted{font-size:12px; color:var(--slate-light);}
+
+  ::-webkit-scrollbar{width:8px; height:8px;}
+  ::-webkit-scrollbar-thumb{background:#D5D9E2; border-radius:8px;}
+
+  .login-wrap{
+    min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--ink);
+  }
+  .login-card{background:#fff; border-radius:16px; padding:40px; width:380px; box-shadow:0 20px 60px rgba(0,0,0,.3);}
+  .login-card .brand{color:var(--ink); padding:0 0 22px;}
+
+  /* Logo */
+  .brand-logo{width:26px; height:26px; border-radius:7px; object-fit:contain; flex-shrink:0;}
+  .brand-logo-sm{width:26px; height:26px;}
+
+  /* Hover label swap (Sign in -> Login, Send reset link -> Block account) */
+  .btn-signin, .btn-reset-link{position:relative; overflow:hidden;}
+  .btn-label-hover{display:none;}
+  .btn-signin:hover .btn-label-default, .btn-reset-link:hover .btn-label-default{display:none;}
+  .btn-signin:hover .btn-label-hover, .btn-reset-link:hover .btn-label-hover{display:inline;}
+
+  /* Copyright */
+  .login-copyright{text-align:center; font-size:11px; color:var(--slate-light); margin-top:26px;}
+  .app-copyright{font-size:11px; color:var(--slate-light); margin-top:10px;}
+
+  /* Initial load delay overlay */
+  .boot-overlay{
+    position:fixed; inset:0; background:var(--ink); z-index:999;
+    display:flex; align-items:center; justify-content:center; color:#fff;
+    flex-direction:column; gap:14px;
+  }
+  .boot-overlay .boot-logo{width:40px; height:40px; border-radius:10px; object-fit:contain;}
+  .boot-overlay .boot-spinner{
+    width:22px; height:22px; border-radius:50%; border:3px solid rgba(255,255,255,.25);
+    border-top-color:#fff; animation:boot-spin 0.8s linear infinite;
+  }
+  @keyframes boot-spin{ to{ transform:rotate(360deg); } }
+
+  .beneficiary-row{display:flex; align-items:center; justify-content:space-between; padding:13px 0; border-bottom:1px solid var(--line);}
+  .beneficiary-row:last-child{border-bottom:none;}
+  .beneficiary-meta{display:flex; align-items:center; gap:12px;}
+  .ben-avatar{width:36px; height:36px; border-radius:50%; background:#EDEFF5; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12.5px; color:var(--slate);}
+
+  @media (max-width: 880px){
+    .grid.cols-3, .grid.cols-2{grid-template-columns:1fr;}
+    .sidebar{width:72px;}
+    .sidebar .label-text{display:none;}
+    .brand span.label-text{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== INITIAL LOAD DELAY ===================== -->
+<div class="boot-overlay" id="bootOverlay">
+  <img src="alliance-logo.png" alt="" class="boot-logo">
+  <div class="boot-spinner"></div>
+</div>
+
+<!-- ===================== LOGIN SCREEN ===================== -->
+<div class="login-wrap" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <div class="brand">
+      <img src="alliance-logo.png" alt="Alliance Digital Pay" class="brand-logo">
+      Alliance Digital Pay
+    </div>
+    <h2 style="margin:0 0 4px; font-size:18px;">Sign in to your account</h2>
+    <p class="small-muted" style="margin:0 0 22px;">Business banking, simplified.</p>
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="loginEmail" placeholder="you@company.com" value="">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="loginPassword" placeholder="••••••••" value="">
+    </div>
+    <div class="error-text" id="loginError" style="display:none; margin-bottom:12px;"></div>
+    <button class="btn btn-signin" style="width:100%; justify-content:center;" onclick="doLogin()">
+      <span class="btn-label-default">Sign in</span>
+      <span class="btn-label-hover">Login</span>
+    </button>
+    <p style="text-align:center; margin-top:16px;">
+      <a class="linklike" onclick="openForgotPassword()" style="font-size:12.5px;">Forgot password?</a>
+    </p>
+    <p class="login-copyright">© 2024 Alliance Digital Pay. All rights reserved.</p>
+  </div>
+</div>
+
+<!-- ===================== APP SHELL ===================== -->
+<div class="app" id="appShell" style="display:none;">
+  <div class="sidebar">
+    <div class="brand"><img src="alliance-logo.png" alt="Alliance Digital Pay" class="brand-logo brand-logo-sm"> <span class="label-text">Alliance Digital Pay</span></div>
+    <div class="nav">
+      <a class="nav-link active" data-page="dashboard"><span class="dot"></span><span class="label-text">Dashboard</span></a>
+      <a class="nav-link" data-page="transactions"><span class="dot"></span><span class="label-text">Transactions</span></a>
+      <a class="nav-link" data-page="send"><span class="dot"></span><span class="label-text">Send Money</span></a>
+      <a class="nav-link" data-page="beneficiaries"><span class="dot"></span><span class="label-text">Beneficiaries</span></a>
+      <a class="nav-link" data-page="cards"><span class="dot"></span><span class="label-text">Cards</span></a>
+      <a class="nav-link" data-page="reports"><span class="dot"></span><span class="label-text">Reports</span></a>
+      <a class="nav-link" data-page="settings"><span class="dot"></span><span class="label-text">Settings</span></a>
+    </div>
+    <div class="sidebar-foot">
+      <div style="font-size:13px; font-weight:600;">Bhatpara Trading Co.</div>
+      <div class="acct">Acct ····4521 · Business Plus</div>
+      <div class="app-copyright">© 2026 Alliance Digital Pay. All rights reserved.</div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <h1 id="pageTitle">Dashboard</h1>
+      <div class="right">
+        <button class="pill-btn" onclick="showToast('No new notifications.')">🔔 Notifications</button>
+        <div class="avatar" onclick="toggleAccountMenu()" id="avatarBtn">RS</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ---------------- DASHBOARD ---------------- -->
+      <div class="page active" id="page-dashboard">
+        <div class="grid cols-3">
+          <div class="card">
+            <h3>Available Balance</h3>
+            <div class="balance-amount tabular"><span class="currency">₹</span>4,82,310.50</div>
+            <div class="balance-sub trend-up">▲ 3.2% vs last month</div>
+          </div>
+          <div class="card">
+            <h3>Pending Transfers</h3>
+            <div class="balance-amount tabular">3</div>
+            <div class="balance-sub">Worth ₹1,12,400.00</div>
+          </div>
+          <div class="card">
+            <h3>This Month's Spend</h3>
+            <div class="balance-amount tabular">₹2,18,940.00</div>
+            <div class="balance-sub trend-down">▲ 8.1% vs last month</div>
+          </div>
+        </div>
+
+        <div class="section-title">Quick actions</div>
+        <div class="grid cols-3">
+          <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+            <h3 style="text-transform:none; font-size:14px; color:var(--ink);">Send money to a beneficiary</h3>
+            <button class="btn" id="sendMoneyQuickBtn" aria-label="Delete account" title="" onclick="goToPage('send')">Send Money</button>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+            <h3 style="text-transform:none; font-size:14px; color:var(--ink);">Add a new beneficiary</h3>
+            <button class="btn secondary" onclick="goToPage('beneficiaries')">Add Beneficiary</button>
+          </div>
+          <div class="card" style="display:flex; flex-direction:column; gap:10px;">
+            <h3 style="text-transform:none; font-size:14px; color:var(--ink);">Download statement</h3>
+            <button class="btn secondary" onclick="goToPage('reports')">Go to Reports</button>
+          </div>
+        </div>
+
+        <div class="section-title">Recent transactions</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="recentTxBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ---------------- TRANSACTIONS ---------------- -->
+      <div class="page" id="page-transactions">
+        <div class="toolbar">
+          <input type="text" id="txSearch" placeholder="Search by description, e.g. Amazon" style="max-width:260px;" oninput="renderTransactions()">
+          <input type="date" id="txFrom" onchange="renderTransactions()">
+          <span class="small-muted">to</span>
+          <input type="date" id="txTo" onchange="renderTransactions()" style="max-width:160px;">
+          <select id="txStatusFilter" style="max-width:160px;" onchange="renderTransactions()">
+            <option value="">All statuses</option>
+            <option value="Success">Success</option>
+            <option value="Pending">Pending</option>
+            <option value="Failed">Failed</option>
+          </select>
+          <button class="btn secondary" onclick="resetTxFilters()">Reset</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Date</th><th>Description</th><th>Type</th><th>Amount</th><th>Status</th><th>Ref ID</th></tr></thead>
+            <tbody id="txBody"></tbody>
+          </table>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px;">
+          <span class="small-muted" id="txPageInfo">Page 1 of 1</span>
+          <div style="display:flex; gap:8px;">
+            <button class="btn secondary" onclick="txPrevPage()" id="txPrevBtn">Previous</button>
+            <button class="btn secondary" onclick="txNextPage()" id="txNextBtn">Next</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- SEND MONEY (multi-step) ---------------- -->
+      <div class="page" id="page-send">
+        <div class="card" style="max-width:640px;">
+          <div class="stepper">
+            <div class="step" id="step1Indicator">1. Recipient</div>
+            <div class="step" id="step2Indicator">2. Amount</div>
+            <div class="step" id="step3Indicator">3. Review &amp; Confirm</div>
+          </div>
+
+          <!-- Step 1 -->
+          <div id="sendStep1">
+            <div class="field">
+              <label>Select beneficiary</label>
+              <select id="sendBeneficiary"></select>
+              <div class="hint">Don't see who you're looking for? <a class="linklike" onclick="goToPage('beneficiaries')">Add a beneficiary</a> first.</div>
+            </div>
+            <div class="field">
+              <label>Transfer type</label>
+              <select id="sendType" onchange="updateFeePreview()">
+                <option value="domestic">Domestic (NEFT/IMPS)</option>
+                <option value="international">International (SWIFT)</option>
+              </select>
+            </div>
+            <div class="modal-actions" style="margin-top:24px;">
+              <button class="btn" onclick="goToSendStep(2)">Continue</button>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div id="sendStep2" style="display:none;">
+            <div class="field">
+              <label>Amount (₹)</label>
+              <input type="number" id="sendAmount" placeholder="0.00" oninput="updateFeePreview()">
+              <div class="hint">Available balance: ₹4,82,310.50</div>
+            </div>
+            <div class="field">
+              <label>Purpose of transfer</label>
+              <input type="text" id="sendPurpose" placeholder="e.g. Vendor payment, Invoice #1042">
+            </div>
+            <div class="card" style="background:var(--canvas); border-style:dashed;">
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+                <span class="small-muted">Transfer amount</span><span id="feePreviewAmount" class="tabular">₹0.00</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:6px;">
+                <span class="small-muted">Fee (<span id="feePreviewPct">1%</span>)</span><span id="feePreviewFee" class="tabular">₹0.00</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; font-size:14px; font-weight:700; margin-top:8px; border-top:1px solid var(--line); padding-top:8px;">
+                <span>Total deducted</span><span id="feePreviewTotal" class="tabular">₹0.00</span>
+              </div>
+            </div>
+            <div class="modal-actions" style="margin-top:24px;">
+              <button class="btn secondary" onclick="goToSendStep(1)">Back</button>
+              <button class="btn" onclick="goToSendStep(3)">Continue</button>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div id="sendStep3" style="display:none;">
+            <div class="card" style="background:var(--canvas);">
+              <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span class="small-muted">Beneficiary</span><strong id="reviewBeneficiary"></strong></div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span class="small-muted">Transfer type</span><strong id="reviewType"></strong></div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span class="small-muted">Amount</span><strong id="reviewAmount" class="tabular"></strong></div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:10px;"><span class="small-muted">Fee</span><strong id="reviewFee" class="tabular"></strong></div>
+              <div style="display:flex; justify-content:space-between;"><span class="small-muted">Purpose</span><strong id="reviewPurpose"></strong></div>
+            </div>
+            <div class="modal-actions" style="margin-top:24px;">
+              <button class="btn secondary" onclick="goToSendStep(2)">Back</button>
+              <button class="btn" id="confirmSendBtn" onclick="confirmSend()">Confirm &amp; Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- BENEFICIARIES ---------------- -->
+      <div class="page" id="page-beneficiaries">
+        <div class="toolbar">
+          <button class="btn" onclick="openAddBeneficiary()">+ Add Beneficiary</button>
+        </div>
+        <div class="card" id="beneficiaryListCard">
+          <!-- rows injected -->
+        </div>
+      </div>
+
+      <!-- ---------------- CARDS ---------------- -->
+      <div class="page" id="page-cards">
+        <div class="grid cols-2">
+          <div class="card">
+            <h3>Business Debit Card</h3>
+            <div style="margin:14px 0; padding:20px; border-radius:12px; background:linear-gradient(135deg,var(--ink),#2A3666); color:#fff;">
+              <div style="font-size:12px; opacity:.7; margin-bottom:18px;">NORTHBRIDGE PAY · BUSINESS</div>
+              <div style="font-size:18px; letter-spacing:2px; margin-bottom:14px;" class="tabular">•••• •••• •••• 4521</div>
+              <div style="display:flex; justify-content:space-between; font-size:12px; opacity:.85;">
+                <span>BHATPARA TRADING CO.</span><span>09/29</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn secondary" onclick="showToast('Card frozen.')">Freeze Card</button>
+              <button class="btn secondary" onclick="showToast('Redirecting to card settings...')">Card Settings</button>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Spending limits</h3>
+            <div class="field"><label>Daily limit (₹)</label><input type="number" value="50000"></div>
+            <div class="field"><label>Per-transaction limit (₹)</label><input type="number" value="25000"></div>
+            <button class="btn" onclick="showToast('Limits updated.')">Save changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- REPORTS ---------------- -->
+      <div class="page" id="page-reports">
+        <div class="card">
+          <h3 style="text-transform:none; font-size:15px; color:var(--ink); margin-bottom:14px;">Download statement</h3>
+          <div class="field-row">
+            <div class="field"><label>From</label><input type="date"></div>
+            <div class="field"><label>To</label><input type="date"></div>
+          </div>
+          <button class="btn" onclick="showToast('Preparing your statement...')">Generate PDF</button>
+        </div>
+      </div>
+
+      <!-- ---------------- SETTINGS ---------------- -->
+      <div class="page" id="page-settings">
+        <div class="card" style="max-width:520px;">
+          <h3 style="text-transform:none; font-size:15px; color:var(--ink); margin-bottom:14px;">Account</h3>
+          <div class="field"><label>Business name</label><input type="text" value="Bhatpara Trading Co."></div>
+          <div class="field"><label>Registered email</label><input type="email" value="accounts@bhatparatrading.test"></div>
+          <button class="btn secondary" onclick="showToast('Profile updated.')">Save changes</button>
+          <div style="margin-top:24px; padding-top:20px; border-top:1px solid var(--line);">
+            <button class="btn danger-outline" onclick="doLogout()">Log out</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-overlay" id="addBeneficiaryModal">
+  <div class="modal">
+    <h2>Add beneficiary</h2>
+    <div class="sub">They'll appear in your Send Money list once added.</div>
+    <div class="field"><label>Full name</label><input type="text" id="benName" placeholder="e.g. Anya Sharma"></div>
+    <div class="field"><label>Email</label><input type="email" id="benEmail" placeholder="name@company.com">
+      <div class="error-text" id="benEmailError">Please enter a valid email address.</div>
+    </div>
+    <div class="field"><label>Account number</label><input type="text" id="benAccount" placeholder="000123456789"></div>
+    <div class="field"><label>IFSC / SWIFT code</label><input type="text" id="benIfsc" placeholder="NBPY0001234"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('addBeneficiaryModal')">Cancel</button>
+      <button class="btn" onclick="saveBeneficiary()">Save beneficiary</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="forgotPasswordModal">
+  <div class="modal">
+    <h2>Reset your password</h2>
+    <div class="sub">Enter the email associated with your account.</div>
+    <div class="field"><label>Email</label><input type="email" id="forgotEmail" placeholder="you@company.com"></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal('forgotPasswordModal')">Cancel</button>
+      <button class="btn btn-reset-link" onclick="sendResetLink()">
+        <span class="btn-label-default">Send reset link</span>
+        <span class="btn-label-hover">Block account</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetSentModal">
+  <div class="modal">
+    <h2>Check your inbox</h2>
+    <div class="sub">We've sent a password reset link to your email address. Click the link in that email to continue.</div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('resetSentModal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================
+   DATA
+   ===================================================== */
+let beneficiaries = [
+  {id:1, name:"Arvind Kapoor", email:"arvind@vendorco.com", account:"000112233445", ifsc:"HDFC0001122"},
+  {id:2, name:"Priya Menon", email:"priya@globaltrade.io", account:"000998877665", ifsc:"ICIC0009988"},
+  {id:3, name:"Tanaka Logistics K.K.", email:"accounts@tanaka-logi.jp", account:"JP19283746", ifsc:"SWIFT-MUFGJP"}
+];
+
+let transactions = [
+  {date:"2026-06-27", desc:"Amazon Web Services", type:"Debit", amount:14200.00, status:"Success", ref:"TXN10231"},
+  {date:"2026-06-26", desc:"Payment from Tanaka Logistics K.K.", type:"Credit", amount:88000.00, status:"Success", ref:"TXN10230"},
+  {date:"2026-06-25", desc:"Vendor payment - Priya Menon", type:"Debit", amount:32000.00, status:"Pending", ref:"TXN10229"},
+  {date:"2026-06-24", desc:"Office supplies - Staples India", type:"Debit", amount:3120.50, status:"Success", ref:"TXN10228"},
+  {date:"2026-06-23", desc:"amazon refund", type:"Credit", amount:1199.00, status:"Success", ref:"TXN10227"},
+  {date:"2026-06-22", desc:"Payroll batch #06", type:"Debit", amount:412000.00, status:"Success", ref:"TXN10226"},
+  {date:"2026-06-21", desc:"Vendor payment - Arvind Kapoor", type:"Debit", amount:18500.00, status:"Failed", ref:"TXN10225"},
+  {date:"2026-06-20", desc:"Software subscription - Figma", type:"Debit", amount:2300.00, status:"Success", ref:"TXN10224"},
+  {date:"2026-06-19", desc:"Client payment - Northwind Traders", type:"Credit", amount:55000.00, status:"Success", ref:"TXN10223"},
+  {date:"2026-06-18", desc:"Utility bill - electricity", type:"Debit", amount:6750.00, status:"Pending", ref:"TXN10222"},
+  {date:"2026-06-17", desc:"Vendor payment - Tanaka Logistics", type:"Debit", amount:72000.00, status:"Success", ref:"TXN10221"},
+  {date:"2026-06-16", desc:"Refund - Staples India", type:"Credit", amount:540.00, status:"Success", ref:"TXN10220"},
+];
+
+let txPage = 1;
+const TX_PER_PAGE = 8;
+// BUG #15: total pages is calculated correctly, but Next button enable/disable logic uses a stale check (see txNextPage/renderTransactions)
+
+let sendFlowState = { beneficiary:null, type:'domestic', amount:null, purpose:null, fee:0, total:0 };
+
+/* =====================================================
+   LOGIN / LOGOUT
+   ===================================================== */
+const VALID_EMAIL = "testlogin01@yopmail.com";
+const VALID_PASSWORD = "PassExpo@";
+
+function doLogin(){
+  const emailInput = document.getElementById('loginEmail').value.trim();
+  const passwordInput = document.getElementById('loginPassword').value;
+  const errorBox = document.getElementById('loginError');
+
+  const emailMatches = emailInput === VALID_EMAIL;
+  const passwordMatches = passwordInput === VALID_PASSWORD;
+
+  if(emailMatches && passwordMatches){
+    errorBox.style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appShell').style.display = 'flex';
+    renderAll();
+    return;
+  }
+
+  // INTENTIONAL BUG (per spec): error messages are swapped / wrong on purpose.
+  // If the EMAIL is actually correct but password is wrong, we show "Email is wrong" (swapped).
+  // If the EMAIL is wrong (regardless of password), we show "Password is wrong" (swapped).
+  errorBox.style.display = 'block';
+  if(emailMatches && !passwordMatches){
+    errorBox.textContent = "Email is wrong.";
+  } else {
+    errorBox.textContent = "Password is wrong.";
+  }
+}
+
+function doLogout(){
+  // BUG #13: logout does not clear any session flag / does not navigate to a "real" login state in history.
+  // It just shows the login screen overlay again, but since nothing is cleared,
+  // pressing back or re-triggering doLogin-equivalent state shows dashboard with no re-auth.
+  document.getElementById('appShell').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function openForgotPassword(){
+  openModal('forgotPasswordModal');
+}
+
+function sendResetLink(){
+  const email = document.getElementById('forgotEmail').value;
+  closeModal('forgotPasswordModal');
+  // BUG #9: This just shows a generic "check your inbox" message with no real continuation -
+  // there is no actual reset flow afterward; clicking "Done" just returns to login with nothing changed.
+  openModal('resetSentModal');
+}
+
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
+document.querySelectorAll('.nav-link').forEach(link=>{
+  link.addEventListener('click', ()=> goToPage(link.dataset.page));
+});
+
+function goToPage(pageName){
+  document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+  const navLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+  if(navLink) navLink.classList.add('active');
+
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.getElementById('page-'+pageName).classList.add('active');
+
+  const titles = {
+    dashboard:"Dashboard", transactions:"Transactions", send:"Send Money",
+    beneficiaries:"Beneficiaries", cards:"Cards", reports:"Reports", settings:"Settings"
+  };
+  document.getElementById('pageTitle').textContent = titles[pageName] || pageName;
+
+  if(pageName === 'transactions') renderTransactions();
+  if(pageName === 'send') { populateSendBeneficiaries(); resetSendFlow(); }
+  if(pageName === 'beneficiaries') renderBeneficiaries();
+}
+
+function toggleAccountMenu(){
+  showToast("Account menu coming soon.");
+}
+
+/* =====================================================
+   DASHBOARD
+   ===================================================== */
+function renderRecentTransactions(){
+  const body = document.getElementById('recentTxBody');
+  body.innerHTML = '';
+  transactions.slice(0,5).forEach(tx=>{
+    body.innerHTML += transactionRow(tx, false);
+  });
+}
+
+function transactionRow(tx, showRef){
+  const statusClass = tx.status === 'Success' ? 'status-success' : (tx.status === 'Pending' ? 'status-pending' : 'status-failed');
+  // BUG #16: status icon included for Success/Failed but omitted for Pending (color-only signal in this one spot)
+  let icon = '';
+  if(tx.status === 'Success') icon = '✓ ';
+  if(tx.status === 'Failed') icon = '✕ ';
+  const amountSign = tx.type === 'Credit' ? '+' : '−';
+  const amountColor = tx.type === 'Credit' ? 'var(--success)' : 'var(--ink)';
+  return `<tr>
+    <td>${formatDate(tx.date)}</td>
+    <td>${tx.desc}</td>
+    <td>${tx.type}</td>
+    <td class="tabular" style="color:${amountColor}; font-weight:600;">${amountSign}₹${tx.amount.toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+    <td><span class="status-pill ${statusClass}">${icon}${tx.status}</span></td>
+    ${showRef ? `<td class="small-muted">${tx.ref}</td>` : ''}
+  </tr>`;
+}
+
+function formatDate(d){
+  const date = new Date(d+'T00:00:00');
+  return date.toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+/* =====================================================
+   TRANSACTIONS PAGE
+   ===================================================== */
+function renderTransactions(){
+  const search = document.getElementById('txSearch').value; // BUG #8: case-sensitive search - no .toLowerCase() normalization
+  const from = document.getElementById('txFrom').value;
+  const to = document.getElementById('txTo').value;
+  const statusFilter = document.getElementById('txStatusFilter').value;
+
+  let filtered = transactions.filter(tx=>{
+    let matchesSearch = search ? tx.desc.includes(search) : true; // case-sensitive .includes()
+    let matchesStatus = statusFilter ? tx.status === statusFilter : true;
+    let matchesDate = true;
+    if(from && to){
+      // BUG #7: no validation that from <= to. If from > to, this just silently returns no results.
+      matchesDate = tx.date >= from && tx.date <= to;
+    } else if(from){
+      matchesDate = tx.date >= from;
+    } else if(to){
+      matchesDate = tx.date <= to;
+    }
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / TX_PER_PAGE));
+  if(txPage > totalPages) txPage = totalPages;
+  const start = (txPage-1)*TX_PER_PAGE;
+  const pageItems = filtered.slice(start, start+TX_PER_PAGE);
+
+  const body = document.getElementById('txBody');
+  body.innerHTML = '';
+  if(pageItems.length === 0){
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">∅</div>No transactions match your filters.</div></td></tr>`;
+  } else {
+    pageItems.forEach(tx=>{ body.innerHTML += transactionRow(tx, true); });
+  }
+
+  document.getElementById('txPageInfo').textContent = `Page ${txPage} of ${totalPages}`;
+  document.getElementById('txPrevBtn').disabled = (txPage <= 1);
+
+  // BUG #15: Next button's disabled state is calculated BEFORE filtering reduces totalPages on this render pass
+  // in certain filter combos it stays visually enabled (no .disabled styling/cursor change applied via CSS,
+  // only the attribute - and the attribute itself is set using the OLD txPage from before filters tightened it)
+  document.getElementById('txNextBtn').disabled = false; // intentionally not checking totalPages here
+}
+
+function txNextPage(){
+  txPage++;
+  renderTransactions();
+}
+function txPrevPage(){
+  if(txPage>1){ txPage--; renderTransactions(); }
+}
+function resetTxFilters(){
+  document.getElementById('txSearch').value = '';
+  document.getElementById('txFrom').value = '';
+  document.getElementById('txTo').value = '';
+  document.getElementById('txStatusFilter').value = '';
+  txPage = 1;
+  renderTransactions();
+}
+
+/* =====================================================
+   BENEFICIARIES
+   ===================================================== */
+function renderBeneficiaries(){
+  const card = document.getElementById('beneficiaryListCard');
+  if(beneficiaries.length === 0){
+    card.innerHTML = `<div class="empty-state"><div class="big">👤</div>No beneficiaries yet.</div>`;
+    return;
+  }
+  card.innerHTML = beneficiaries.map(b=>`
+    <div class="beneficiary-row">
+      <div class="beneficiary-meta">
+        <div class="ben-avatar">${initials(b.name)}</div>
+        <div>
+          <div style="font-weight:600;">${b.name}</div>
+          <div class="small-muted">${b.account} · ${b.ifsc}</div>
+        </div>
+      </div>
+      <button class="btn secondary" onclick="goToPage('send')">Send money</button>
+    </div>
+  `).join('');
+}
+
+function initials(name){
+  return name.split(' ').map(p=>p[0]).slice(0,2).join('').toUpperCase();
+}
+
+function openAddBeneficiary(){
+  document.getElementById('benName').value = '';
+  document.getElementById('benEmail').value = '';
+  document.getElementById('benAccount').value = '';
+  document.getElementById('benIfsc').value = '';
+  document.getElementById('benEmailError').style.display = 'none';
+  openModal('addBeneficiaryModal');
+}
+
+function saveBeneficiary(){
+  const name = document.getElementById('benName').value.trim();
+  const email = document.getElementById('benEmail').value.trim();
+  const account = document.getElementById('benAccount').value.trim();
+  const ifsc = document.getElementById('benIfsc').value.trim();
+
+  // BUG #5: weak email validation - only checks for a "." , not "@", so "nameATcompany.com" or "abc.com" passes
+  const emailValid = email.includes('.');
+  if(!emailValid){
+    document.getElementById('benEmailError').style.display = 'block';
+    return;
+  }
+  document.getElementById('benEmailError').style.display = 'none';
+
+  if(!name || !account || !ifsc){
+    showToast('Please fill in all fields.');
+    return;
+  }
+
+  beneficiaries.push({id: Date.now(), name, email, account, ifsc});
+  closeModal('addBeneficiaryModal');
+  showToast(`${name} added as a beneficiary.`);
+  renderBeneficiaries();
+
+  // BUG #11: populateSendBeneficiaries() is intentionally NOT called here.
+  // The Send Money beneficiary dropdown is only populated when navigating to that page,
+  // so if the dropdown was already rendered earlier in this session before refresh/page nav cycle,
+  // a newly added beneficiary won't show up until the Send page is left and re-entered fresh.
+  // (Kept here as a comment for the answer key - the actual repro is subtle, see populateSendBeneficiaries below.)
+}
+
+/* =====================================================
+   SEND MONEY FLOW
+   ===================================================== */
+let sendBeneficiarySnapshotTaken = false;
+
+function populateSendBeneficiaries(){
+  const select = document.getElementById('sendBeneficiary');
+  // BUG #11 (actual mechanism): snapshot only taken once per "session" unless forced.
+  // This simulates a real bug pattern: a beneficiary list cached at first load / first visit
+  // and not invalidated when new data is added elsewhere, until a manual refresh.
+  if(!sendBeneficiarySnapshotTaken){
+    window.__sendBeneficiarySnapshot = beneficiaries.slice();
+    sendBeneficiarySnapshotTaken = true;
+  }
+  select.innerHTML = window.__sendBeneficiarySnapshot.map(b=>`<option value="${b.id}">${b.name} (${b.account})</option>`).join('');
+}
+
+function resetSendFlow(){
+  goToSendStep(1, true);
+}
+
+function goToSendStep(step, silent){
+  // BUG #10: navigating backward via the in-flow Back button is fine (state preserved intentionally here),
+  // but there is NO popstate / hashchange handling at all - so a user pressing the browser Back button
+  // while on step 2 or 3 does not return to step 1 of the flow; it leaves the Send Money page entirely
+  // (back to whatever page/history state existed before), losing all entered data with no warning.
+  document.querySelectorAll('#page-send .step').forEach(s=>s.classList.remove('active','done'));
+
+  document.getElementById('sendStep1').style.display = step===1 ? 'block':'none';
+  document.getElementById('sendStep2').style.display = step===2 ? 'block':'none';
+  document.getElementById('sendStep3').style.display = step===3 ? 'block':'none';
+
+  if(step>=1) document.getElementById('step1Indicator').classList.add(step===1?'active':'done');
+  if(step>=2) document.getElementById('step2Indicator').classList.add(step===2?'active':'done');
+  if(step>=3) document.getElementById('step3Indicator').classList.add(step===3?'active':'done');
+
+  if(step===3){
+    const benSelect = document.getElementById('sendBeneficiary');
+    const benName = benSelect.options[benSelect.selectedIndex] ? benSelect.options[benSelect.selectedIndex].text : '—';
+    const type = document.getElementById('sendType').value;
+    const amount = parseFloat(document.getElementById('sendAmount').value) || 0;
+    const purpose = document.getElementById('sendPurpose').value.trim();
+
+    const feePct = type === 'international' ? 0.02 : 0.01;
+    const fee = amount * feePct;
+
+    sendFlowState = {beneficiary:benName, type, amount, purpose, fee, total: amount+fee};
+
+    document.getElementById('reviewBeneficiary').textContent = benName;
+    document.getElementById('reviewType').textContent = type === 'international' ? 'International (SWIFT)' : 'Domestic (NEFT/IMPS)';
+    document.getElementById('reviewAmount').textContent = '₹' + amount.toLocaleString('en-IN', {minimumFractionDigits:2});
+    document.getElementById('reviewFee').textContent = '₹' + fee.toLocaleString('en-IN', {minimumFractionDigits:2});
+    document.getElementById('reviewPurpose').textContent = purpose || '—';
+    // BUG #14: "Purpose of transfer" has no required-field asterisk anywhere in step 2's label,
+    // yet confirmSend() below blocks submission if it's empty, with a generic message.
+  }
+}
+
+function updateFeePreview(){
+  const amount = parseFloat(document.getElementById('sendAmount').value) || 0;
+  const type = document.getElementById('sendType').value;
+  // BUG #6: fee preview on step 2 ALWAYS shows 1%, regardless of transfer type,
+  // even though the actual review step (goToSendStep(3)) correctly calculates 2% for international.
+  // This creates a mismatch between what's previewed and what's actually charged.
+  const feePct = 0.01;
+  const fee = amount * feePct;
+  document.getElementById('feePreviewPct').textContent = '1%';
+  document.getElementById('feePreviewAmount').textContent = '₹' + amount.toLocaleString('en-IN', {minimumFractionDigits:2});
+  document.getElementById('feePreviewFee').textContent = '₹' + fee.toLocaleString('en-IN', {minimumFractionDigits:2});
+  document.getElementById('feePreviewTotal').textContent = '₹' + (amount+fee).toLocaleString('en-IN', {minimumFractionDigits:2});
+}
+
+let sendInFlight = false;
+function confirmSend(){
+  // BUG #4 & #3: no validation anywhere in this flow that amount is positive or <= available balance.
+  // A negative amount or an amount far exceeding ₹4,82,310.50 will sail through to "success".
+  if(!sendFlowState.purpose){
+    showToast('Something went wrong. Please check the form and try again.');
+    // BUG #14 continued: unhelpful generic error, doesn't say WHICH field, doesn't link back to it.
+    return;
+  }
+
+  // BUG #12: no submit-lock. Rapid double-clicking "Confirm & Send" before this completes
+  // pushes two transactions instead of one (no disabling of the button during "processing").
+  const btn = document.getElementById('confirmSendBtn');
+
+  transactions.unshift({
+    date: new Date().toISOString().slice(0,10),
+    desc: `Transfer to ${sendFlowState.beneficiary}`,
+    type: 'Debit',
+    amount: sendFlowState.amount,
+    status: 'Success',
+    ref: 'TXN' + Math.floor(10000+Math.random()*89999)
+  });
+
+  showToast(`₹${sendFlowState.amount.toLocaleString('en-IN')} sent to ${sendFlowState.beneficiary.split(' (')[0]}.`);
+  renderRecentTransactions();
+  goToPage('dashboard');
+}
+
+/* =====================================================
+   MODAL HELPERS
+   ===================================================== */
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+function showToast(msg){
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=> toast.classList.remove('show'), 3200);
+}
+
+/* =====================================================
+   INIT
+   ===================================================== */
+function renderAll(){
+  renderRecentTransactions();
+  renderTransactions();
+  renderBeneficiaries();
+  populateSendBeneficiaries();
+}
+
+/* Intentional 2.5s delay on first load before showing the login screen */
+window.addEventListener('DOMContentLoaded', function(){
+  setTimeout(function(){
+    document.getElementById('bootOverlay').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }, 2500);
+});
+</script>
+</body>
+</html>
