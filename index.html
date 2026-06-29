@@ -559,26 +559,31 @@ function doLogin(){
   const passwordInput = document.getElementById('loginPassword').value;
   const errorBox = document.getElementById('loginError');
 
-  const emailMatches = emailInput === VALID_EMAIL;
-  const passwordMatches = passwordInput === VALID_PASSWORD;
+  errorBox.style.display = 'block';
 
-  if(emailMatches && passwordMatches){
-    errorBox.style.display = 'none';
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('appShell').style.display = 'flex';
-    renderAll();
+  // Rule 1: either field empty (or both) -> generic "field is empty" error
+  if(!emailInput || !passwordInput){
+    errorBox.textContent = "This field is required.";
     return;
   }
 
-  // INTENTIONAL BUG (per spec): error messages are swapped / wrong on purpose.
-  // If the EMAIL is actually correct but password is wrong, we show "Email is wrong" (swapped).
-  // If the EMAIL is wrong (regardless of password), we show "Password is wrong" (swapped).
-  errorBox.style.display = 'block';
-  if(emailMatches && !passwordMatches){
-    errorBox.textContent = "Email is wrong.";
-  } else {
-    errorBox.textContent = "Password is wrong.";
+  // Rule 2: both filled, email doesn't match -> email-specific error
+  if(emailInput !== VALID_EMAIL){
+    errorBox.textContent = "Email is incorrect.";
+    return;
   }
+
+  // Rule 3: email correct, password doesn't match -> password-specific error
+  if(passwordInput !== VALID_PASSWORD){
+    errorBox.textContent = "Password is incorrect.";
+    return;
+  }
+
+  // Rule 4: both correct -> log in
+  errorBox.style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appShell').style.display = 'flex';
+  renderAll();
 }
 
 function doLogout(){
